@@ -237,9 +237,24 @@
         CFTimeInterval elapsed = (_displayLink.timestamp - self.firstTimeStamp);
         CMTime time = CMTimeMakeWithSeconds(elapsed, 1000);
         
+        // set-up context for drawing
         CVPixelBufferRef pixelBuffer = NULL;
-        CGContextRef bitmapContext = [self createPixelBufferAndBitmapContext:&pixelBuffer];
+        CVPixelBufferPoolCreatePixelBuffer(NULL, _outputBufferPool, &pixelBuffer);
+        CVPixelBufferLockBaseAddress(pixelBuffer, 0);
         
+        CGContextRef bitmapContext = NULL;
+        bitmapContext = CGBitmapContextCreate(CVPixelBufferGetBaseAddress(pixelBuffer),
+                                              CVPixelBufferGetWidth(pixelBuffer),
+                                              CVPixelBufferGetHeight(pixelBuffer),
+                                              8, CVPixelBufferGetBytesPerRow(pixelBuffer), _rgbColorSpace,
+                                              kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst
+                                              );
+        CGContextScaleCTM(bitmapContext, _scale, _scale);
+        CGAffineTransform flipVertical = CGAffineTransformMake(1, 0, 0, -1, 0, _viewSize.height);
+        CGContextConcatCTM(bitmapContext, flipVertical);
+        
+        
+
         // draw each window into the context (other windows include UIKeyboard, UIAlert)
         // FIX: UIKeyboard is currently only rendered correctly in portrait orientation
         dispatch_sync(dispatch_get_main_queue(), ^{
@@ -279,25 +294,6 @@
         
         dispatch_semaphore_signal(_frameRenderingSemaphore);
     });
-}
-
-- (CGContextRef)createPixelBufferAndBitmapContext:(CVPixelBufferRef *)pixelBuffer
-{
-    CVPixelBufferPoolCreatePixelBuffer(NULL, _outputBufferPool, pixelBuffer);
-    CVPixelBufferLockBaseAddress(*pixelBuffer, 0);
-    
-    CGContextRef bitmapContext = NULL;
-    bitmapContext = CGBitmapContextCreate(CVPixelBufferGetBaseAddress(*pixelBuffer),
-                                          CVPixelBufferGetWidth(*pixelBuffer),
-                                          CVPixelBufferGetHeight(*pixelBuffer),
-                                          8, CVPixelBufferGetBytesPerRow(*pixelBuffer), _rgbColorSpace,
-                                          kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst
-                                          );
-    CGContextScaleCTM(bitmapContext, _scale, _scale);
-    CGAffineTransform flipVertical = CGAffineTransformMake(1, 0, 0, -1, 0, _viewSize.height);
-    CGContextConcatCTM(bitmapContext, flipVertical);
-    
-    return bitmapContext;
 }
 
 @end
