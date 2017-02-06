@@ -33,6 +33,7 @@ typedef void (^VideoCompletionBlock)(void);
 @property (nonatomic) NSInteger fps;
 
 + (instancetype)sharedInstance;
+- (BOOL)startRecordingWithView:(UIView*)view;
 - (BOOL)startRecording;
 - (void)pauseRecording;
 - (void)resumeRecording;
