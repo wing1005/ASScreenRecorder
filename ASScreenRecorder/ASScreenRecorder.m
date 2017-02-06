@@ -22,7 +22,7 @@
 @property (strong, nonatomic) NSDictionary *outputBufferPoolAuxAttributes;
 @property (nonatomic) CFTimeInterval firstTimeStamp;
 @property (nonatomic) BOOL isRecording;
-
+@property (strong, nonatomic) UIView *recordingView;
 @property (strong, nonatomic) NSMutableArray *pauseResumeTimeRanges;
 
 @end
@@ -80,6 +80,19 @@
 {
     NSAssert(!_isRecording, @"videoURL can not be changed whilst recording is in progress");
     _videoURL = videoURL;
+}
+
+- (BOOL)startRecordingWithView:(UIView*)view
+{
+    self.recordingView = view;
+
+    if (!_isRecording) {
+        [self setUpWriter];
+        _isRecording = (_videoWriter.status == AVAssetWriterStatusWriting);
+        _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(writeVideoFrame)];
+        [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+    }
+    return _isRecording;
 }
 
 - (BOOL)startRecording
@@ -307,8 +320,15 @@
         // FIX: UIKeyboard is currently only rendered correctly in portrait orientation
         dispatch_sync(dispatch_get_main_queue(), ^{
             UIGraphicsPushContext(bitmapContext); {
-                for (UIWindow *window in [[UIApplication sharedApplication] windows]) {
-                    [window drawViewHierarchyInRect:CGRectMake(0, 0, width, height) afterScreenUpdates:NO];
+                if (self.recordingView)
+                {
+                    [self.recordingView drawViewHierarchyInRect:CGRectMake(0, 0, _viewSize.width, _viewSize.height) afterScreenUpdates:NO];
+                }
+                else
+                {
+                    for (UIWindow *window in [[UIApplication sharedApplication] windows]) {
+                        [window drawViewHierarchyInRect:CGRectMake(0, 0, _viewSize.width, _viewSize.height) afterScreenUpdates:NO];
+                    }
                 }
             } UIGraphicsPopContext();
         });
