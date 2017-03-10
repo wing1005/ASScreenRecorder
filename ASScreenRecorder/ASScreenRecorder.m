@@ -85,17 +85,18 @@
 - (BOOL)startRecordingWithView:(UIView*)view
 {
     self.recordingView = view;
-
-    if (!_isRecording) {
-        [self setUpWriter];
-        _isRecording = (_videoWriter.status == AVAssetWriterStatusWriting);
-        _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(writeVideoFrame)];
-        [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
-    }
-    return _isRecording;
+   _viewSize = view.bounds.size;
+    return [self startRecordingInternal];
 }
 
 - (BOOL)startRecording
+{
+    self.recordingView = nil;
+    _viewSize = [UIApplication sharedApplication].delegate.window.bounds.size;
+    return [self startRecordingInternal];
+}
+
+- (BOOL)startRecordingInternal
 {
     if (!_isRecording) {
         [self setUpWriter];
@@ -277,6 +278,7 @@
 
 - (void)writeVideoFrame
 {
+    if (!_isRecording) return;
     // throttle the number of frames to prevent meltdown
     // technique gleaned from Brad Larson's answer here: http://stackoverflow.com/a/5956119
     if (dispatch_semaphore_wait(_frameRenderingSemaphore, DISPATCH_TIME_NOW) != 0) {
